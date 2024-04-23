@@ -1,0 +1,54 @@
+{
+  "name": "vue-indent",
+  "displayName": "vue-indent",
+  "description": "Dynamically adjust indentation length for .vue file(4 spaces for <script> and 2 spaces for <template> and <style>",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onLanguage:vue"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [{
+      "command": "vue-indent.activate",
+      "title": "activate vue-indent"
+    }],
+    "configuration": {
+      "title": "Vue Indent",
+      "properties": {
+        "vueIndent.templateIndentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Tab size inside <template></template> tag."
+        },
+        "vueIndent.styleIndentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Tab size inside <style></style> tag."
+        },
+        "vueIndent.scriptIndentSize": {
+          "type": "number",
+          "default": 4,
+          "description": "Tab size inside <script></script> tag."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.88.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "eslint": "^8.57.0",
+    "typescript": "^5.3.3",
+    "@vscode/test-cli": "^0.0.8",
+    "@vscode/test-electron": "^2.3.9"
+  }
+}
