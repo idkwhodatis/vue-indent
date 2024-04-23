@@ -1,6 +1,6 @@
 # vue-indent
 [Github Repo](https://github.com/idkwhodatis/vue-indent)  
-This is a simple extension that dynamically adjust indentation size differently inside `<template>`,`<style>`, and `<script>` for `.vue` files.
+This is a simple extension that dynamically adjust indentation size differently inside `<template>`, `<style>`, and `<script>` for `.vue` files.
 
 ## Warning
 Note that this extension would store original editor.options and modify:

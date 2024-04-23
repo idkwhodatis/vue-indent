@@ -3,6 +3,9 @@
   "displayName": "vue-indent",
   "description": "Dynamically adjust indentation length for .vue file(4 spaces for <script> and 2 spaces for <template> and <style>",
   "version": "1.0.0",
+  "icon": "logo.png",
+  "publisher": "idkwhodatis",
+  "repository": "https://github.com/idkwhodatis/vue-indent",
   "engines": {
     "vscode": "^1.88.0"
   },
