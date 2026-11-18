@@ -12,6 +12,7 @@ suite('Vue indentation integration', () => {
     test('Vue block changes preserve spaces and restore actual editor options', async () => {
         const doc = await vscode.workspace.openTextDocument({ language: 'vue', content: '<template>hello</template>\n<script>const x=1</script>' });
         const editor = await vscode.window.showTextDocument(doc);
+        assert.equal(doc.languageId, 'vue', 'Vue language fixture must be registered');
         editor.options = { tabSize: 8, indentSize: 8, insertSpaces: true };
         editor.selection = new vscode.Selection(doc.positionAt(11), doc.positionAt(11));
         controller = createController(vscode);

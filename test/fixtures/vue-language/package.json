@@ -1,0 +1,1 @@
+{"name":"vue-indent-test-language","publisher":"vue-indent-tests","version":"0.0.1","engines":{"vscode":"^1.88.0"},"contributes":{"languages":[{"id":"vue","extensions":[".vue"]}]}}
