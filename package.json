@@ -1,9 +1,8 @@
 {
   "name": "vue-indent",
   "displayName": "vue-indent",
-  "description": "Dynamically adjust indentation length for .vue file(4 spaces for <script> and 2 spaces for <template> and <style>",
+  "description": "Per-block indentation widths for Vue single-file components, preserving your spaces/tabs preference.",
   "version": "1.0.0",
-  "icon": "logo.png",
   "publisher": "idkwhodatis",
   "repository": "https://github.com/idkwhodatis/vue-indent",
   "engines": {
@@ -12,46 +11,66 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onLanguage:vue"],
+  "activationEvents": [
+    "onLanguage:vue"
+  ],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "vue-indent.activate",
-      "title": "activate vue-indent"
-    }],
+    "commands": [
+      {
+        "command": "vue-indent.activate",
+        "title": "activate vue-indent"
+      }
+    ],
     "configuration": {
       "title": "Vue Indent",
       "properties": {
         "vueIndent.templateIndentSize": {
-          "type": "number",
+          "type": "integer",
           "default": 2,
-          "description": "Tab size inside <template></template> tag."
+          "description": "Indentation/tab display width inside template blocks. Preserves spaces/tabs preference.",
+          "minimum": 1,
+          "maximum": 32,
+          "scope": "resource"
         },
         "vueIndent.styleIndentSize": {
-          "type": "number",
+          "type": "integer",
           "default": 2,
-          "description": "Tab size inside <style></style> tag."
+          "description": "Indentation/tab display width inside style blocks. Preserves spaces/tabs preference.",
+          "minimum": 1,
+          "maximum": 32,
+          "scope": "resource"
         },
         "vueIndent.scriptIndentSize": {
-          "type": "number",
+          "type": "integer",
           "default": 4,
-          "description": "Tab size inside <script></script> tag."
+          "description": "Indentation/tab display width inside script blocks. Preserves spaces/tabs preference.",
+          "minimum": 1,
+          "maximum": 32,
+          "scope": "resource"
         }
       }
     }
   },
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "test": "vscode-test"
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "test": "npm run lint && npm run typecheck && npm run test:unit",
+    "test:unit": "node --test test/unit/*.test.js",
+    "test:integration": "vscode-test",
+    "package": "vsce package --out vue-indent.vsix"
   },
   "devDependencies": {
-    "@types/vscode": "^1.88.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
-    "eslint": "^8.57.0",
-    "typescript": "^5.3.3",
+    "@types/vscode": "^1.88.0",
     "@vscode/test-cli": "^0.0.8",
-    "@vscode/test-electron": "^2.3.9"
+    "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^4.1.1",
+    "eslint": "^8.57.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.5.45"
   }
 }
