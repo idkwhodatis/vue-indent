@@ -1,86 +1,113 @@
 const { regions } = require('./regions');
+const { guideAnchors } = require('./guides');
+const { planIndent } = require('./indent');
+const { createController: createLegacyController } = require('./legacy-controller');
 
 /** @param {typeof import('vscode')} api */
 function createController(api) {
-    /** @type {Map<import('vscode').TextEditor, { original: import('vscode').TextEditorOptions, applied: import('vscode').TextEditorOptions }>} */
-    const states = new Map();
-    /** @type {WeakMap<import('vscode').TextDocument, {version: number, ranges: ReturnType<typeof regions>}>} */
+    /** @type {WeakMap<import('vscode').TextDocument, {version:number, source:string, ranges:ReturnType<typeof regions>}>} */
     const cache = new WeakMap();
+    const decoration = api.window.createTextEditorDecorationType({
+        borderWidth: '0 0 0 1px', borderStyle: 'solid',
+        borderColor: new api.ThemeColor('editorIndentGuide.background1'),
+        rangeBehavior: api.DecorationRangeBehavior.ClosedClosed
+    });
+    /** @type {Set<import('vscode').TextEditor>} */
+    const decorated = new Set();
     let disposed = false;
+    /** @type {ReturnType<typeof createLegacyController> | undefined} */
+    let legacy;
 
-    /** @param {import('vscode').TextEditor} editor */
-    function restore(editor) {
-        const state = states.get(editor);
-        if (!state) return;
-        // Do not overwrite a newer manual/editor configuration change.
-        /** @type {import('vscode').TextEditorOptions} */
-        const options = {};
-        for (const key of /** @type {const} */ (['tabSize', 'indentSize'])) {
-            if (editor.options[key] === state.applied[key]) options[key] = state.original[key];
-        }
-        states.delete(editor);
-        if (Object.keys(options).length) editor.options = options;
-    }
-
-    function update() {
-        if (disposed) return;
-        const editor = api.window.activeTextEditor;
-        for (const previous of states.keys()) if (previous !== editor) restore(previous);
-        if (!editor) return;
-        const doc = editor.document;
-        if (doc.languageId !== 'vue' || doc.isClosed) { restore(editor); return; }
+    /** @param {import('vscode').TextDocument} doc */
+    function parsed(doc) {
         let entry = cache.get(doc);
         if (!entry || entry.version !== doc.version) {
-            entry = { version: doc.version, ranges: regions(doc.getText()) };
+            const source = doc.getText();
+            entry = { version: doc.version, source, ranges: regions(source) };
             cache.set(doc, entry);
         }
-        // Editor options are global to the document: mixed-block multicursors
-        // cannot safely receive different settings, so leave the original values.
-        const selected = editor.selections.map(selection => {
-            const start = doc.offsetAt(selection.start);
-            const end = doc.offsetAt(selection.end);
-            return entry.ranges.find(range => start >= range.start && end <= range.end);
-        });
-        const region = selected[0];
-        if (!region || selected.some(other => !other || other.kind !== region.kind)) { restore(editor); return; }
-        const config = api.workspace.getConfiguration('vueIndent', doc.uri);
-        const fallback = region.kind === 'script' ? 4 : 2;
-        const size = config.get(`${region.kind}IndentSize`, fallback);
-        if (!Number.isInteger(size) || size < 1 || size > 32) { restore(editor); return; }
-        let state = states.get(editor);
-        if (!state) {
-            state = { original: { tabSize: editor.options.tabSize, indentSize: editor.options.indentSize }, applied: {} };
-            states.set(editor, state);
-        } else {
-            for (const key of /** @type {const} */ (['tabSize', 'indentSize'])) {
-                if (editor.options[key] !== state.applied[key]) state.original[key] = editor.options[key];
-            }
-        }
-        state.applied = { tabSize: size, indentSize: size };
-        if (editor.options.tabSize !== size || editor.options.indentSize !== size) editor.options = state.applied;
+        return entry;
     }
-
+    /** @param {import('vscode').TextDocument} doc */
+    function configFor(doc) { return api.workspace.getConfiguration('vueIndent', doc.uri); }
+    /** @param {import('vscode').WorkspaceConfiguration} config */
+    function widthsFor(config) {
+        /** @type {{template:number,script:number,style:number}} */
+        const widths = {template:2,script:4,style:2};
+        for (const kind of /** @type {const} */ (['template', 'script', 'style'])) {
+            const size = config.get(`${kind}IndentSize`, kind === 'script' ? 4 : 2);
+            widths[kind] = Number.isInteger(size) && size >= 1 && size <= 32 ? size : (kind === 'script' ? 4 : 2);
+        }
+        return widths;
+    }
+    /** @param {import('vscode').TextEditor} editor */
+    function tabWidth(editor) {
+        const size = Number(editor.options.tabSize);
+        return Number.isInteger(size) && size > 0 ? size : 4;
+    }
+    function render() {
+        if (disposed) return;
+        const active = api.window.activeTextEditor;
+        const wantsLegacy = active?.document.languageId === 'vue' && configFor(active.document).get('mode', /** @type {string} */ ('guides')) === 'legacyEditorOptions';
+        if (!wantsLegacy && legacy) { legacy.dispose(); legacy = undefined; }
+        if (wantsLegacy && !legacy) legacy = createLegacyController(api);
+        const visible = new Set(api.window.visibleTextEditors);
+        for (const editor of decorated) {
+            if (!visible.has(editor)) { editor.setDecorations(decoration, []); decorated.delete(editor); }
+        }
+        for (const editor of visible) {
+            const doc = editor.document;
+            if (doc.isClosed || doc.languageId !== 'vue' || configFor(doc).get('mode', /** @type {string} */ ('guides')) !== 'guides') {
+                editor.setDecorations(decoration, []); decorated.delete(editor); continue;
+            }
+            const data = parsed(doc);
+            const anchors = guideAnchors(data.source, data.ranges, widthsFor(configFor(doc)), tabWidth(editor));
+            // Only decorate visible lines; parsing is cached by document version.
+            const ranges = anchors.filter(point => editor.visibleRanges.some(range => point.line >= range.start.line && point.line <= range.end.line))
+                .map(point => new api.Range(point.line, point.character, point.line, point.character + 1));
+            editor.setDecorations(decoration, ranges);
+            decorated.add(editor);
+        }
+    }
+    /** @param {boolean} outdent */
+    async function indent(outdent) {
+        const editor = api.window.activeTextEditor;
+        if (!editor || editor.document.languageId !== 'vue' || editor.document.isClosed) return false;
+        const config = configFor(editor.document);
+        if (!config.get('commandsEnabled', false)) {
+            api.window.showInformationMessage('Enable vueIndent.commandsEnabled to use Vue Indent range commands. Native Tab/Enter are unchanged.');
+            return false;
+        }
+        const doc = editor.document;
+        const data = parsed(doc);
+        const selections = editor.selections.map(selection => ({ start: doc.offsetAt(selection.start), end: doc.offsetAt(selection.end) }));
+        const edits = planIndent(data.source, data.ranges, selections, widthsFor(config), tabWidth(editor), editor.options.insertSpaces !== false, outdent);
+        if (!edits.length) return false;
+        return editor.edit(builder => {
+            for (const edit of edits) builder.replace(new api.Range(doc.positionAt(edit.start), doc.positionAt(edit.end)), edit.text);
+        }, { undoStopBefore: true, undoStopAfter: true });
+    }
     const subscriptions = [
-        api.window.onDidChangeTextEditorSelection(event => { if (event.textEditor === api.window.activeTextEditor) update(); }),
-        api.window.onDidChangeActiveTextEditor(update),
-        api.workspace.onDidChangeTextDocument(event => { if (event.document === api.window.activeTextEditor?.document) update(); }),
-        api.workspace.onDidChangeConfiguration(event => {
-            const editor = api.window.activeTextEditor;
-            if (editor && event.affectsConfiguration('vueIndent', editor.document.uri)) update();
-        }),
-        api.workspace.onDidOpenTextDocument(() => update()),
-        api.workspace.onDidCloseTextDocument(doc => {
-            cache.delete(doc);
-            for (const editor of states.keys()) if (editor.document === doc) restore(editor);
-        }),
-        api.commands.registerCommand('vue-indent.activate', update)
+        api.window.onDidChangeVisibleTextEditors(render),
+        api.window.onDidChangeActiveTextEditor(render),
+        api.window.onDidChangeTextEditorVisibleRanges(render),
+        api.window.onDidChangeTextEditorOptions(render),
+        api.workspace.onDidChangeTextDocument(render),
+        api.workspace.onDidOpenTextDocument(render),
+        api.workspace.onDidCloseTextDocument(doc => { cache.delete(doc); render(); }),
+        api.workspace.onDidChangeConfiguration(event => { if (event.affectsConfiguration('vueIndent')) render(); }),
+        api.commands.registerCommand('vue-indent.activate', render),
+        api.commands.registerCommand('vue-indent.indent', () => indent(false)),
+        api.commands.registerCommand('vue-indent.outdent', () => indent(true))
     ];
-    update();
+    render();
     return { dispose() {
         if (disposed) return;
         disposed = true;
         subscriptions.forEach(subscription => subscription.dispose());
-        for (const editor of states.keys()) restore(editor);
+        legacy?.dispose();
+        for (const editor of decorated) editor.setDecorations(decoration, []);
+        decorated.clear(); decoration.dispose();
     } };
 }
 module.exports = { createController };

@@ -1,7 +1,7 @@
 {
   "name": "vue-indent",
   "displayName": "vue-indent",
-  "description": "Per-block indentation widths for Vue single-file components, preserving your spaces/tabs preference.",
+  "description": "Per-region Vue indentation guides and optional indent commands, without changing native Tab/Enter.",
   "version": "1.0.0",
   "publisher": "idkwhodatis",
   "repository": "https://github.com/idkwhodatis/vue-indent",
@@ -19,7 +19,17 @@
     "commands": [
       {
         "command": "vue-indent.activate",
-        "title": "activate vue-indent"
+        "title": "Vue Indent: Refresh Guides"
+      },
+      {
+        "command": "vue-indent.indent",
+        "title": "Vue Indent: Indent Selected Lines",
+        "enablement": "editorLangId == vue && config.vueIndent.commandsEnabled"
+      },
+      {
+        "command": "vue-indent.outdent",
+        "title": "Vue Indent: Outdent Selected Lines",
+        "enablement": "editorLangId == vue && config.vueIndent.commandsEnabled"
       }
     ],
     "configuration": {
@@ -28,7 +38,7 @@
         "vueIndent.templateIndentSize": {
           "type": "integer",
           "default": 2,
-          "description": "Indentation/tab display width inside template blocks. Preserves spaces/tabs preference.",
+          "description": "Visual guide interval and explicit command step inside template blocks. Also used as editor width in legacyEditorOptions mode.",
           "minimum": 1,
           "maximum": 32,
           "scope": "resource"
@@ -36,7 +46,7 @@
         "vueIndent.styleIndentSize": {
           "type": "integer",
           "default": 2,
-          "description": "Indentation/tab display width inside style blocks. Preserves spaces/tabs preference.",
+          "description": "Visual guide interval and explicit command step inside style blocks. Also used as editor width in legacyEditorOptions mode.",
           "minimum": 1,
           "maximum": 32,
           "scope": "resource"
@@ -44,10 +54,27 @@
         "vueIndent.scriptIndentSize": {
           "type": "integer",
           "default": 4,
-          "description": "Indentation/tab display width inside script blocks. Preserves spaces/tabs preference.",
+          "description": "Visual guide interval and explicit command step inside script blocks. Also used as editor width in legacyEditorOptions mode.",
           "minimum": 1,
           "maximum": 32,
           "scope": "resource"
+        },
+        "vueIndent.mode": {
+          "type": "string",
+          "enum": [
+            "guides",
+            "legacyEditorOptions",
+            "off"
+          ],
+          "default": "guides",
+          "scope": "resource",
+          "description": "Guides preserve native editing. legacyEditorOptions opts into cursor-dependent editor tab/indent widths. off hides guides."
+        },
+        "vueIndent.commandsEnabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Enable explicit region-aware indent/outdent commands. No default keybindings; native Tab/Enter stay unchanged."
         }
       }
     }
