@@ -3,7 +3,6 @@
   "displayName": "vue-indent",
   "description": "Dynamically adjust indentation length for .vue file(4 spaces for <script> and 2 spaces for <template> and <style>",
   "version": "1.0.0",
-  "icon": "logo.png",
   "publisher": "idkwhodatis",
   "repository": "https://github.com/idkwhodatis/vue-indent",
   "engines": {
@@ -12,13 +11,17 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onLanguage:vue"],
+  "activationEvents": [
+    "onLanguage:vue"
+  ],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "vue-indent.activate",
-      "title": "activate vue-indent"
-    }],
+    "commands": [
+      {
+        "command": "vue-indent.activate",
+        "title": "activate vue-indent"
+      }
+    ],
     "configuration": {
       "title": "Vue Indent",
       "properties": {
@@ -43,15 +46,19 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "package": "vsce package --out vue-indent.vsix"
   },
   "devDependencies": {
-    "@types/vscode": "^1.88.0",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "eslint": "^8.57.0",
-    "typescript": "^5.3.3",
-    "@vscode/test-cli": "^0.0.8",
-    "@vscode/test-electron": "^2.3.9"
+    "@types/vscode": "1.88.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.19.130",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "typescript": "^7.0.2",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1"
   }
 }

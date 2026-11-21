@@ -17,3 +17,9 @@ when deactivated, these values would be restored to original.
 ## Release Notes
 ### 1.0.0
 Initial release of vue-indent
+
+## Development
+
+Use Node.js 24 LTS (`nvm use`); the upgraded ESLint/test/packaging tools no longer support Node.js 18. This development requirement does not change the extension's VS Code minimum of 1.88. `@types/vscode` is pinned to 1.88.0 and Node typings stay on the latest 18.x release so type declarations do not silently permit newer Extension Host APIs.
+
+Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run package`. Extension Host tests need a graphical display (on Linux, `xvfb-run -a npm test`). `typecheck` preserves the repository's existing `checkJs: false`; it is not a strict correctness check, and the existing test suite is only a sample smoke test. The missing/untracked `logo.png` manifest reference was removed so packaging is reproducible from a clean checkout.
